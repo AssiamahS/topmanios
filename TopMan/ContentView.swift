@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 
 struct ContentView: View {
-    @AppStorage("serverURL") private var serverURL = ""
+    @AppStorage("serverURL") private var serverURL = "saints-macbook-air.tail40af16.ts.net"
     @State private var showSettings = false
     @State private var reloadToken = 0
 

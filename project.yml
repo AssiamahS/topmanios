@@ -1,0 +1,37 @@
+name: TopMan
+options:
+  bundleIdPrefix: com.assiamah
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: QGMAWHX827
+    MARKETING_VERSION: 0.1.1
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "5.9"
+targets:
+  TopMan:
+    type: application
+    platform: iOS
+    sources: [TopMan]
+    info:
+      path: TopMan/Info.plist
+      properties:
+        CFBundleDisplayName: TopMan
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          # the workspace server is plain http on the user's own tailnet
+          NSAllowsLocalNetworking: true
+          NSAllowsArbitraryLoads: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.assiamah.topman
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: 1

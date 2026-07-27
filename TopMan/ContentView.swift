@@ -5,6 +5,7 @@ struct ContentView: View {
     @AppStorage("serverURL") private var serverURL = "saints-macbook-air.tail40af16.ts.net"
     @State private var showSettings = false
     @State private var reloadToken = 0
+    @State private var phase: LoadPhase = .loading
 
     private var ink: Color { Color(red: 0.086, green: 0.082, blue: 0.102) }
 
@@ -12,8 +13,9 @@ struct ContentView: View {
         ZStack {
             ink.ignoresSafeArea()
             if let url = normalizedURL {
-                WorkspaceWebView(url: url, reloadToken: reloadToken)
+                WorkspaceWebView(url: url, reloadToken: reloadToken, phase: $phase)
                     .ignoresSafeArea(edges: .bottom)
+                    .overlay { statusOverlay }
                     .overlay(alignment: .topTrailing) {
                         Button {
                             showSettings = true
@@ -41,6 +43,35 @@ struct ContentView: View {
                     }
             }
             .presentationDetents([.medium])
+        }
+    }
+
+    @ViewBuilder private var statusOverlay: some View {
+        switch phase {
+        case .loading:
+            VStack(spacing: 14) {
+                ProgressView()
+                Text("Reaching your Mac…")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        case .failed(let message):
+            VStack(spacing: 14) {
+                Image(systemName: "wifi.exclamationmark")
+                    .font(.system(size: 40))
+                    .foregroundStyle(.secondary)
+                Text("Can't reach the Mac")
+                    .font(.headline)
+                Text(message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Retry") { reloadToken += 1 }
+                    .buttonStyle(.borderedProminent)
+            }
+            .padding(32)
+        case .loaded:
+            EmptyView()
         }
     }
 
@@ -110,9 +141,16 @@ struct SetupView: View {
     }
 }
 
+enum LoadPhase: Equatable {
+    case loading
+    case loaded
+    case failed(String)
+}
+
 struct WorkspaceWebView: UIViewRepresentable {
     let url: URL
     let reloadToken: Int
+    @Binding var phase: LoadPhase
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -121,24 +159,65 @@ struct WorkspaceWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = UIColor(red: 0.086, green: 0.082, blue: 0.102, alpha: 1)
         webView.scrollView.contentInsetAdjustmentBehavior = .never
-        webView.load(URLRequest(url: url))
-        context.coordinator.lastURL = url
+        webView.navigationDelegate = context.coordinator
+        context.coordinator.load(url, in: webView)
         context.coordinator.lastReloadToken = reloadToken
         return webView
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         if context.coordinator.lastURL != url || context.coordinator.lastReloadToken != reloadToken {
-            context.coordinator.lastURL = url
             context.coordinator.lastReloadToken = reloadToken
-            webView.load(URLRequest(url: url))
+            context.coordinator.load(url, in: webView)
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func makeCoordinator() -> Coordinator { Coordinator(phase: $phase) }
 
-    final class Coordinator {
+    final class Coordinator: NSObject, WKNavigationDelegate {
         var lastURL: URL?
         var lastReloadToken = 0
+        private let phase: Binding<LoadPhase>
+        private var retries = 0
+
+        init(phase: Binding<LoadPhase>) {
+            self.phase = phase
+        }
+
+        func load(_ url: URL, in webView: WKWebView) {
+            lastURL = url
+            retries = 0
+            phase.wrappedValue = .loading
+            webView.load(URLRequest(url: url, timeoutInterval: 8))
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            retries = 0
+            phase.wrappedValue = .loaded
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            handleFailure(error, webView: webView)
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            handleFailure(error, webView: webView)
+        }
+
+        // the tailscale tunnel can take a beat to wake from background — keep
+        // retrying instead of leaving a silent black screen
+        private func handleFailure(_ error: Error, webView: WKWebView) {
+            if (error as NSError).code == NSURLErrorCancelled { return }
+            guard let url = lastURL else { return }
+            if retries < 5 {
+                retries += 1
+                phase.wrappedValue = .loading
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak webView] in
+                    webView?.load(URLRequest(url: url, timeoutInterval: 8))
+                }
+            } else {
+                phase.wrappedValue = .failed(error.localizedDescription)
+            }
+        }
     }
 }

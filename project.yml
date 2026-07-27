@@ -6,7 +6,7 @@ options:
 settings:
   base:
     DEVELOPMENT_TEAM: QGMAWHX827
-    MARKETING_VERSION: 0.1.2
+    MARKETING_VERSION: 0.2.1
     CURRENT_PROJECT_VERSION: 1
     SWIFT_VERSION: "5.9"
 targets:
@@ -21,6 +21,9 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: TopMan scans your local network to find the Mac running your workspace.
+        NSBonjourServices:
+          - _topman._tcp
         UILaunchScreen: {}
         NSAppTransportSecurity:
           # the workspace server is plain http on the user's own tailnet

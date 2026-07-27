@@ -56,6 +56,7 @@ struct ContentView: View {
 
 struct SetupView: View {
     @Binding var serverURL: String
+    @StateObject private var discovery = MacDiscovery()
 
     var body: some View {
         VStack(spacing: 22) {
@@ -73,8 +74,39 @@ struct SetupView: View {
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.URL)
+            statusLine
         }
         .padding(28)
+        .onAppear {
+            discovery.onFound = { address in
+                // never clobber an address the user typed themselves
+                if serverURL.trimmingCharacters(in: .whitespaces).isEmpty {
+                    serverURL = address
+                }
+            }
+            if serverURL.trimmingCharacters(in: .whitespaces).isEmpty {
+                discovery.start()
+            }
+        }
+        .onDisappear { discovery.stop() }
+    }
+
+    @ViewBuilder private var statusLine: some View {
+        switch discovery.status {
+        case .searching:
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Looking for your Mac…")
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        case .found(let address):
+            Label("Found \(address)", systemImage: "checkmark.circle.fill")
+                .font(.footnote)
+                .foregroundStyle(.green)
+        case .idle, .failed:
+            EmptyView()
+        }
     }
 }
 

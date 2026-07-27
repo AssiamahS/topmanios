@@ -6,7 +6,7 @@ options:
 settings:
   base:
     DEVELOPMENT_TEAM: QGMAWHX827
-    MARKETING_VERSION: 0.2.3
+    MARKETING_VERSION: 0.2.4
     CURRENT_PROJECT_VERSION: 1
     SWIFT_VERSION: "5.9"
 targets:
@@ -26,9 +26,13 @@ targets:
           - _topman._tcp
         UILaunchScreen: {}
         NSAppTransportSecurity:
-          # the workspace server is plain http on the user's own tailnet
+          # granular keys make iOS IGNORE NSAllowsArbitraryLoads, so the tailnet
+          # domain needs its own explicit http exception (same recipe as amapiano)
           NSAllowsLocalNetworking: true
-          NSAllowsArbitraryLoads: true
+          NSExceptionDomains:
+            tail40af16.ts.net:
+              NSIncludesSubdomains: true
+              NSExceptionAllowsInsecureHTTPLoads: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft

@@ -1,0 +1,1 @@
+- black webview on device = ATS: granular NSAppTransportSecurity keys (NSAllowsLocalNetworking etc.) make iOS IGNORE NSAllowsArbitraryLoads — plain-http ts.net loads die before leaving the phone with zero error UI. fix = NSExceptionDomains entry for tail40af16.ts.net (amapiano's recipe)
